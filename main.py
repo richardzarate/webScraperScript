@@ -8,12 +8,9 @@ from urllib.parse import urljoin
 ########################## Initialize Global Variables ############################################
 site = "https://books.toscrape.com/" #main page of the site
 
+categoryURL = "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html"
+
 bookURL = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html" #Testing on single book first
-
-
-
-#
-# print("Connected to bookToScrape!")
 
 
 
@@ -32,6 +29,20 @@ column_headers = [
 
 
 ################################# Helper Functions #############################################
+def get_category(categoryURL):
+    books_in_category = []
+
+    category_response = requests.get(categoryURL)
+
+    category_soup = BeautifulSoup(category_response.text, "html.parser")
+
+    for a in category_soup.select("article.product_pod h3 a"):
+        book_link = a["href"]
+        book_full_link = urljoin(category_response.url, book_link)
+        books_in_category.append(get_data(book_full_link))
+
+    return books_in_category
+
 def get_data(bookURL):
     # connect to the url, get information
     response = requests.get(bookURL)
@@ -99,12 +110,12 @@ def get_review_rating(soup):
 
     return str(textToNum.get(ratingName, 0)) + " out of " + str(totalStars)
 
-def save_to_csv(data):
+def save_to_csv(category_data):
     #with open() closes automatically, no need to explicitly close it
     with open("book.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames = column_headers)
         writer.writeheader()
-        writer.writerow(data)
+        writer.writerows(category_data)
 
 def print_data(data):
     print(f"Product URL: {data.get("product_page_url")}")
@@ -136,11 +147,29 @@ def print_data(data):
 # urlTag = soup.find("a")
 # url = urlTag['href']
 
-book_data = get_data(bookURL)
 
-print_data(book_data)
 
-save_to_csv(book_data)
+# book_data = get_data(bookURL)
+#
+# print_data(book_data)
+
+# save_to_csv(book_data)
+
+
+
+books_in_category = get_category(categoryURL)
+save_to_csv(books_in_category)
+i = 1
+for book in books_in_category:
+
+    print(i)
+    i += 1
+    # save_to_csv(book)
+    print_data(book)
+    print()
+
+
+
 
 
 
