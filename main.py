@@ -146,7 +146,10 @@ def get_review_rating(soup):
     return str(textToNum.get(ratingName, 0)) + " out of " + str(totalStars)
 
 def save_to_csv(category, category_data):
-    file_name = category + ".csv" #names the csv file by its category
+
+    os.makedirs("books_by_category", exist_ok=True) #check if folder is there, if not make that folder
+
+    file_name = "books_by_category/" + category + ".csv" #names the csv file by its category
 
     #with open() closes automatically, no need to explicitly close it
     with open(file_name, "w", newline="", encoding="utf-8") as f:
