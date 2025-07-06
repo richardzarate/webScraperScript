@@ -15,8 +15,8 @@ bookURL = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.
 
 
 #parallel arrays for categories and its respective links
-categories = []
-category_links = []
+categories = [] #contains strings of category names
+category_links = [] #contains strings of urls to category
 
 #csv file column headers, must correspond to book data dictionary
 column_headers = [
@@ -55,7 +55,7 @@ def get_all_books_by_category(siteURL):
 
 
 
-#gets all the books in the category
+#gets all the books in a category
 def get_category(categoryURL):
     books_in_category = [] #an array that saves all the book data
 
@@ -71,6 +71,18 @@ def get_category(categoryURL):
 
     return books_in_category #return the array of book data
 
+#gets an individual book's data:
+#- page url
+#- upc code
+#- title
+#- price with tax
+#- price without tax
+#- quantity available
+#- product description
+#- category
+#- review rating
+#- image url
+#and saves it in a dictionary
 def get_data(bookURL):
     # connect to the url, get information
     response = requests.get(bookURL)
@@ -145,6 +157,9 @@ def get_review_rating(soup):
     #returns the rating into a proper format such as 3 out of 5
     return str(textToNum.get(ratingName, 0)) + " out of " + str(totalStars)
 
+#takes in a string for the category name and a list of books in that category
+#checks if a folder called books_by_category already exists and creates it if not
+#creates a csv file named after the category and contains all the books within the category and all its information
 def save_to_csv(category, category_data):
 
     os.makedirs("books_by_category", exist_ok=True) #check if folder is there, if not make that folder
@@ -157,6 +172,10 @@ def save_to_csv(category, category_data):
         writer.writeheader()
         writer.writerows(category_data)
 
+#takes in a string of a category name, a string for the book title, and a url for an image
+#checks if there are illegal characters in the book title and replace them with underscore
+#checks if a folder associated to the category exists, creates it if not
+#then saves the corresponding image into the corresponding folder by the modified book title with legal characters
 def get_image(category, book_title, image_url):
     # Replace any illegal characters with underscores
     category = re.sub(r'[\\/:"*?<>|]+', "_", category)
@@ -202,6 +221,11 @@ def print_data(data):
 #Run functions
 #####################################################################################
 
+#1. get_all_books_by_category saves the name of the category and the link to that category in parallel arrays
+#2. loop through one of the parallel arrays and grab the index of the current category in array
+#3. use the index grabbed from the loop to grab the books within that category and save it in an array
+#4. at the same time, save the list of books and their information in that category in a csv file - titled by its category
+#5. once a list of books is found in the category, loop through book_in_category to get the individual book's image and save it to a folder named by its category
 
 
 get_all_books_by_category(site) #saves the categories and their links in their respective variables
