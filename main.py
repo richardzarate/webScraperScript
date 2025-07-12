@@ -10,10 +10,6 @@ from urllib.parse import urljoin
 ########################## Initialize Global Variables ############################################
 site = "https://books.toscrape.com/" #main page of the site
 
-categoryURL = "https://books.toscrape.com/catalogue/category/books/poetry_23/index.html"
-
-bookURL = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html" #Testing on single book first
-
 
 #parallel arrays for categories and its respective links
 categories = [] #contains strings of category names
@@ -36,8 +32,8 @@ column_headers = [
 
 ################################# Helper Functions #############################################
 #grab all the information of each category in the site
-def get_all_books_by_category(siteURL):
-    site_response = requests.get(siteURL)#get site html data
+def get_all_categories(site_url):
+    site_response = requests.get(site_url)#get site html data
     site_soup = BeautifulSoup(site_response.text, "html.parser")#parse through html data and make it readable
 
     # Grab all category links under side_categories
@@ -57,13 +53,12 @@ def get_all_books_by_category(siteURL):
 
 
 #gets all the books in a category
-def get_category(categoryURL):
-    #work on padination
+def get_category(category_url):
     books_in_category = [] #an array that saves all the book data
 
     #this while loop checks if the categoryURL contains a string, if it doesn't it stops the loop
-    while categoryURL:
-        category_response = requests.get(categoryURL) #get html data
+    while category_url:
+        category_response = requests.get(category_url) #get html data
 
         category_soup = BeautifulSoup(category_response.text, "html.parser") #parse html data and make it readable
 
@@ -77,12 +72,12 @@ def get_category(categoryURL):
         next_page = category_soup.select_one("li.next a")
         if next_page:
             next_href = next_page["href"]
-            categoryURL = urljoin(categoryURL, next_href)
+            category_url = urljoin(category_url, next_href)
 
-            print("Moving to next page: " + categoryURL)
+            print("Moving to next page: " + category_url)
 
         else:
-            categoryURL = None
+            category_url = None
 
     return books_in_category #return the array of book data
 
@@ -114,18 +109,18 @@ def get_data(bookURL):
     title = soup.find("h1").text.strip()
 
     # ● price_including_tax
-    priceWithTax = soup.find("th", string="Price (incl. tax)").find_next_sibling("td").text.strip()
+    price_with_tax = soup.find("th", string="Price (incl. tax)").find_next_sibling("td").text.strip()
 
     # ● price_excluding_tax
 
-    priceNoTax = soup.find("th", string="Price (excl. tax)").find_next_sibling("td").text.strip()
+    price_no_tax = soup.find("th", string="Price (excl. tax)").find_next_sibling("td").text.strip()
 
     # ● quantity_available
-    quantityAvailable = soup.find("th", string="Availability").find_next_sibling("td").text.strip()
+    quantity_available = soup.find("th", string="Availability").find_next_sibling("td").text.strip()
 
     # ● product_description
 
-    productDescription = soup.find_all("p")[3].text.strip()
+    product_description = soup.find_all("p")[3].text.strip()
 
     # ● category
 
@@ -145,10 +140,10 @@ def get_data(bookURL):
         "product_page_url": response.url,
         "universal_product_code (upc)": upc,
         "book_title": title,
-        "price_including_tax": priceWithTax[1:],
-        "price_excluding_tax": priceNoTax[1:],
-        "quantity_available": quantityAvailable,
-        "product_description": productDescription,
+        "price_including_tax": price_with_tax[1:],
+        "price_excluding_tax": price_no_tax[1:],
+        "quantity_available": quantity_available,
+        "product_description": product_description,
         "category": category,
         "review_rating": review_rating,
         "image_url": image_full_url
@@ -158,19 +153,19 @@ def get_data(bookURL):
 #just converts the rating data into a readable format
 def get_review_rating(soup):
     #takes the rating tag and puts its contents in an array
-    ratingTag = soup.find("p", class_="star-rating")
+    rating_tag = soup.find("p", class_="star-rating")
 
     #counts the total amount of stars
-    totalStars = len(ratingTag.find_all("i", class_="icon-star"))
+    total_stars = len(rating_tag.find_all("i", class_="icon-star"))
 
     #grabs the rating but its a word instead of being a number
-    ratingName = ratingTag["class"][1]
+    rating_name = rating_tag["class"][1]
 
     #dictionary that converts the rating into a number
-    textToNum = {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
+    text_to_num = {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
 
     #returns the rating into a proper format such as 3 out of 5
-    return str(textToNum.get(ratingName, 0)) + " out of " + str(totalStars)
+    return str(text_to_num.get(rating_name, 0)) + " out of " + str(total_stars)
 
 #takes in a string for the category name and a list of book data as dictionaries in that category
 #checks if a folder called books_by_category already exists and creates it if not
@@ -231,7 +226,7 @@ def print_data(data):
 def user_interface():
     #grab the html information for the home page
     #ask user what they would like to do, if input is not among the options given, let the user know and ask again
-    get_all_books_by_category(site)  # saves the categories and their links in their respective variables
+    get_all_categories(site)  # saves the categories and their links in their respective variables
     while True:
 
         print("Please choose what you would like to do by entering the corresponding number:")
@@ -295,7 +290,7 @@ def user_interface():
                         raise ValueError("URL must be from books.toscrape.com")
                     book.append(get_data(bookURL))
                     save_to_csv(book[0].get("book_title"), book)
-                    print("Information for " + book[0].get("book_title") + " has been saved.")
+                    print("Information for " + book[0].get("book_title") + " has been saved as a csv file.")
                     break
                 except (ValueError, requests.RequestException, AttributeError, IndexError, TypeError):
                     print("\033[91mPlease enter a valid URL that points to a valid book page on books.toscrape.com\033[0m")
