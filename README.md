@@ -32,7 +32,17 @@ It organizes the data by category into CSV files and downloads book cover images
     Images downloaded under images/<Category>/
 
 💻 How to run
-Clone or download this repository.
+
+    1️⃣ **Clone or download this repository.**
+    
+    2️⃣ **(Recommended) Create and activate a virtual environment:**
+        On Windows:
+            python -m venv venv
+            venv\Scripts\activate
+        On macOS/Linux:
+            python3 -m venv venv
+            source venv/bin/activate
+
 
 Install the required packages:
 

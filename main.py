@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 
+#update README for setting up virtual environment
 ########################## Initialize Global Variables ############################################
 site = "https://books.toscrape.com/" #main page of the site
 
@@ -57,17 +58,31 @@ def get_all_books_by_category(siteURL):
 
 #gets all the books in a category
 def get_category(categoryURL):
+    #work on padination
     books_in_category = [] #an array that saves all the book data
 
-    category_response = requests.get(categoryURL) #get html data
+    #this while loop checks if the categoryURL contains a string, if it doesn't it stops the loop
+    while categoryURL:
+        category_response = requests.get(categoryURL) #get html data
 
-    category_soup = BeautifulSoup(category_response.text, "html.parser") #parse html data and make it readable
+        category_soup = BeautifulSoup(category_response.text, "html.parser") #parse html data and make it readable
 
-    #loop through the contents of the page and grab a book each run
-    for a in category_soup.select("article.product_pod h3 a"):
-        book_link = a["href"]
-        book_full_link = urljoin(category_response.url, book_link)
-        books_in_category.append(get_data(book_full_link))
+        #loop through the contents of the page and grab a book each run
+        for a in category_soup.select("article.product_pod h3 a"):
+            book_link = a["href"]
+            book_full_link = urljoin(category_response.url, book_link)
+            books_in_category.append(get_data(book_full_link))
+
+        # Check for next page
+        next_page = category_soup.select_one("li.next a")
+        if next_page:
+            next_href = next_page["href"]
+            categoryURL = urljoin(categoryURL, next_href)
+
+            print("Moving to next page: " + categoryURL)
+
+        else:
+            categoryURL = None
 
     return books_in_category #return the array of book data
 
@@ -84,7 +99,7 @@ def get_category(categoryURL):
 #- image url
 #and saves it in a dictionary
 def get_data(bookURL):
-    # connect to the url, get information
+    # connect to the url, get information which is in html form
     response = requests.get(bookURL)
 
     # parse html using BeautifulSoup
@@ -157,7 +172,7 @@ def get_review_rating(soup):
     #returns the rating into a proper format such as 3 out of 5
     return str(textToNum.get(ratingName, 0)) + " out of " + str(totalStars)
 
-#takes in a string for the category name and a list of books in that category
+#takes in a string for the category name and a list of book data as dictionaries in that category
 #checks if a folder called books_by_category already exists and creates it if not
 #creates a csv file named after the category and contains all the books within the category and all its information
 def save_to_csv(category, category_data):
@@ -213,12 +228,90 @@ def print_data(data):
     print(f"Image URL: {data.get("image_url")}")
 
 
+def user_interface():
+    #grab the html information for the home page
+    #ask user what they would like to do, if input is not among the options given, let the user know and ask again
+    get_all_books_by_category(site)  # saves the categories and their links in their respective variables
+    while True:
 
+        print("Please choose what you would like to do by entering the corresponding number:")
+        print("[1] Scrape whole website")
+        print("[2] Scrape a whole category")
+        print("[3] Scrape a single book")
+        print("[4] Quit")
+        print("___________________________________________________________________________________________")
+
+        option = input("option: ")
+        if option not in ["1", "2", "3", "4"]:
+            print("\033[91mInvalid choice. Please enter 1, 2, 3, or 4.\033[0m")
+        if option == "1":
+            # 1. get_all_books_by_category saves the name of the category and the link to that category in parallel arrays
+            # 2. loop through one of the parallel arrays and grab the index of the current category in array
+            # 3. use the index grabbed from the loop to grab the books within that category and save it in an array
+            # 4. at the same time, save the list of books and their information in that category in a csv file - titled by its category
+            # 5. once a list of books is found in the category, loop through book_in_category to get the individual book's image and save it to a folder named by its category
+            for i in range(len(categories)):
+                books_in_category = get_category(category_links[i])
+                save_to_csv(categories[i], books_in_category)  # save all the books in its respective csv file by category
+
+                for book in books_in_category:
+                    get_image(categories[i], book.get("book_title"), book.get(
+                        "image_url"))  # saves individual book covers organizing them by their title and creates folder based on category
+            break
+        if option == "2":
+            #Ask the user for which category to scrape
+            #Once specified, grab the url for the category that has been saved previously by the get_all_books_by category function
+            #Grab all the books and their information within the category
+            #Store it temporarily in a list, then save all the information into a csv file
+            #raise Exceptions when index is out of bounds, or the input given is invalid such as a string instead of an integer
+            while True:
+                try:
+                    print("Please enter a number corresponding to the category you would like to scrape: ")
+                    for i in range(len(categories)):
+                        print("[" + str(i+1) + "] " + categories[i])
+
+                    print("____________________________________________________________________________________________")
+                    index = int(input("Category: ")) - 1
+                    if index >= len(categories) or index < 0:
+                        raise IndexError
+                    books_in_category = get_category(category_links[index])
+                    save_to_csv(categories[index],books_in_category)  # save all the books in its respective csv file by category
+                    print("Category Saved")
+                    break
+                except ValueError:
+                    print("\033[91mPlease only enter numbers that corresponds with the given options\033[0m")
+                except IndexError:
+                    print("\033[91mPlease choose between the numbers given\033[0m")
+            break
+        if option == "3":
+            #check if the URL give leads to books.toscrape.com, or it's a valid URL if not then raise an exception
+            #If the URL is valid grab the book data and save it into a csv
+            book = []
+            while True:
+                try:
+                    print("Please enter the url of the book you would like to scrape: ")
+                    bookURL = input("URL: ")
+                    if "books.toscrape.com" not in bookURL:
+                        raise ValueError("URL must be from books.toscrape.com")
+                    book.append(get_data(bookURL))
+                    save_to_csv(book[0].get("book_title"), book)
+                    print("Information for " + book[0].get("book_title") + " has been saved.")
+                    break
+                except (ValueError, requests.RequestException, AttributeError, IndexError, TypeError):
+                    print("\033[91mPlease enter a valid URL that points to a valid book page on books.toscrape.com\033[0m")
+
+            break
+
+
+        if option == "4":
+            #quit the program
+            print("Quitting program...")
+            break
 
 
 
 #####################################################################################
-#Run functions
+#Run Script User Interface
 #####################################################################################
 
 #1. get_all_books_by_category saves the name of the category and the link to that category in parallel arrays
@@ -227,14 +320,6 @@ def print_data(data):
 #4. at the same time, save the list of books and their information in that category in a csv file - titled by its category
 #5. once a list of books is found in the category, loop through book_in_category to get the individual book's image and save it to a folder named by its category
 
-
-get_all_books_by_category(site) #saves the categories and their links in their respective variables
-
-for i in range(len(categories)):
-    books_in_category = get_category(category_links[i])
-    save_to_csv(categories[i], books_in_category) #save all the books in its respective csv file by category
-
-    for book in books_in_category:
-        get_image(categories[i], book.get("book_title"), book.get("image_url")) #saves individual book covers organizing them by their title and creates folder based on category
+user_interface()
 
 
